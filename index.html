@@ -1,0 +1,413 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cydog Browser - Deterrence Renderer</title>
+    <link rel="icon" type="image/x-icon" href="https://cydogbrowser.com/static/images/logot/favicon.ico">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-blue: #0066ff;
+            --dark-bg: #0a192f;
+            --panel-bg: #152547;
+            --text-light: #ffffff;
+            --border-color: #2a3a5c;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+        
+        header {
+            background-color: var(--panel-bg);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .logo img {
+            width: 54px;
+            height: 65px;
+        }
+        
+        .logo i {
+            font-size: 2rem;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            padding: 2rem;
+            height: calc(100vh - 120px);
+        }
+        
+        .viewer-panel, .results-panel {
+            background-color: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            padding: 12px 20px;
+            background-color: #152547;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-title {
+            font-weight: 600;
+        }
+        
+        .panel-content {
+            flex: 1;
+            overflow: auto;
+            padding: 15px;
+            height: 100%;
+        }
+        
+        .panel-content pre {
+          height: 100%;
+        }
+        
+        textarea {
+            width: 100%;
+            height: calc(100% - 10px);
+            background-color: #0a192f;
+            border: 1px solid #2a3a5c;
+            color: #dcdcdc;
+            border: none;
+            resize: none;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            padding: 10px;
+        }
+        
+        textarea:focus {
+            outline: none;
+        }
+        
+        button {
+            background-color: #2d7ff9;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #0055cc;
+        }
+        
+        .result-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #23345c;
+            border-radius: 6px;
+        }
+        
+        .result-section h3 {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .result-section ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+        
+        .result-section li {
+            padding: 5px 0;
+            font-family: monospace;
+            font-size: 14px;
+            border-bottom: 1px dashed #444;
+        }
+        
+        .warning {
+            background-color: #23345c;
+            color: #e0e2ea;
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img src="https://cydogbrowser.com/static/images/logot.png">
+            <span>Cydog Browser Deterrence Renderer</span>
+        </div>
+        <div class="controls">
+            <button id="testBtn" class="hidden"><i class="fas fa-play"></i> Render JSON</button>
+        </div>
+    </header>
+    <div id="container" class="container">
+        <div class="viewer-panel">
+            <div class="panel-header">
+                <div class="panel-title">HTML Viewer</div>
+                <div>
+                    <button id="convertBtn"><i class="fa-solid fa-code"></i> Convert to JSON</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <textarea id="htmlInput" placeholder="Enter HTML code here..." class=""></textarea>
+            </div>
+        </div>
+        <div id="results-panel" class="results-panel hidden">
+            <div class="panel-header">
+                <div class="panel-title">JSON Viewer</div>
+            </div>
+            <div class="panel-content">
+                <pre id="jsonOutput" class="hidden"></pre>
+                <pre id="jsonViewer"></pre>
+            </div>
+        </div>
+    </div>
+    <div class="warning"><i class="fas fa-exclamation-triangle"></i> WARNING: Conduct pre-production and live testing before using alternative rendering methods.</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+    <script src="static/js/TheiaJSONView.min.js"></script>
+    <script>
+        document.getElementById('convertBtn').addEventListener('click', () => {
+            const htmlString = document.getElementById('htmlInput').value;
+            if (!htmlString.trim()) {
+                alert('Please enter some HTML to convert');
+                return;
+            }
+            
+            try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlString, 'text/html');
+                const jsonOutput = parseNode(doc.documentElement);
+                //const jsonOutput = parseNode(doc.body);
+                const stringifiedJSON = JSON.stringify(jsonOutput, null, 2);
+                const jsonOutputActual = document.getElementById('jsonOutput');
+                jsonOutputActual.innerText = stringifiedJSON;
+                var tjt = new TheiaJSONView(jsonOutput, 'jsonViewer');
+                const container = document.getElementById('container');
+                container.style.gridTemplateColumns = "1fr 1fr";
+                const resultsPanel = document.getElementById('results-panel');
+                resultsPanel.classList.remove("hidden");
+                const testBtn = document.getElementById('testBtn');
+                testBtn.classList.remove("hidden");
+                highlightCode();
+            } catch (error) {
+                alert('Error parsing HTML: ' + error.message);
+                console.error(error);
+            }
+        });
+        
+        document.getElementById('testBtn').addEventListener('click', () => {
+            const jsonText = document.getElementById('jsonOutput').textContent;
+            if (!jsonText.trim()) {
+                alert('Please convert HTML to JSON first');
+                return;
+            }
+            
+            try {
+                const jsonData = JSON.parse(jsonText);
+                const htmlContent = reconstructHTML(jsonData).outerHTML;
+                //const htmlIframe = document.getElementById('htmlIframe');
+                //const iframeDoc = htmlIframe.contentDocument || htmlIframe.contentWindow.document;
+                //iframeDoc.open();
+                //iframeDoc.write(htmlContent);
+                //iframeDoc.close();
+                openHtmlInNewTab(htmlContent, true, "cydogbrowser.com");
+            } catch (error) {
+                alert('Error reconstructing HTML: ' + error.message);
+                console.error(error);
+            }
+        });
+        
+        function parseNode(node) {
+            // Skip text nodes that only contain whitespace
+            if (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()) {
+                return null;
+            }
+            
+            const result = {};
+            
+            if (node.nodeType === Node.TEXT_NODE) {
+                result.text = node.textContent.trim();
+                return result.text ? result : null;
+            }
+            
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                result.tag = node.tagName.toLowerCase();
+                
+                // Parse attributes
+                if (node.attributes && node.attributes.length > 0) {
+                    result.attrs = {};
+                    for (let i = 0; i < node.attributes.length; i++) {
+                        const attr = node.attributes[i];
+                        result.attrs[attr.name] = attr.value;
+                    }
+                }
+                
+                // Parse child nodes
+                if (node.childNodes && node.childNodes.length > 0) {
+                    result.children = [];
+                    for (let i = 0; i < node.childNodes.length; i++) {
+                        const child = parseNode(node.childNodes[i]);
+                        if (child !== null) {
+                            result.children.push(child);
+                        }
+                    }
+                }
+                
+                return result;
+            }
+            
+            return null;
+        }
+        
+        function reconstructHTML(node) {
+            if(node.text){
+              return document.createTextNode(node.text);
+            }
+            
+            const element = document.createElement(node.tag);
+            
+            if (node.attrs) {
+                for (const [key, value] of Object.entries(node.attrs)) {
+                    element.setAttribute(key, value);
+                }
+            }
+            
+            if (node.children) {
+                for (const child of node.children) {
+                    const childNode = reconstructHTML(child);
+                    if (childNode) {
+                        element.appendChild(childNode);
+                    }
+                }
+            }
+            
+            return element;
+        }
+        
+        function openHtmlInNewTab(htmlContent, shouldFrame, hostName) {
+          var newTab = window.open();
+          if (newTab) {
+            newTab.document.open();
+            if(shouldFrame){
+              var htmlContentModded = convertLocalPathsToHttpsLinks(htmlContent, hostName);
+              htmlContentModded = escapeHTMLWithRegex(htmlContentModded);
+              htmlContentModded = `
+                <html lang='en'>
+                  <head>
+                      <meta charset='UTF-8'>
+                      <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                      <title>Re-Rendered from JSON</title>
+                      <style>
+                        .cydog-deterrent-renderer-iframe{
+                          position: fixed;
+                          top: 0;
+                          left: 0;
+                          width: 100vw;
+                          height: 100vh;
+                          border: none;
+                          padding: 0;
+                          margin: 0;
+                        }
+                      </style>
+                  </head>
+                  <body>
+                    <iframe class="cydog-deterrent-renderer-iframe" srcdoc='${htmlContentModded}' sandbox='allow-scripts allow-forms'></iframe>
+                  </body>
+                </html>
+              `;
+              newTab.document.write(htmlContentModded);
+            } else {
+              newTab.document.write(htmlContent);
+            }
+            newTab.document.close();
+          } else {
+            alert('Pop-up blocked! Please allow pop-ups for this site.');
+          }
+        }
+        function escapeHTMLWithRegex(htmlContent) {
+          const htmlEscapes = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#x27;',
+            '/': '&#x2F;'
+          };
+          // Regex to match the special characters globally
+          const htmlEscaper = /[&<>"'/]/g; 
+
+          return ('' + htmlContent).replace(htmlEscaper, function(match) {
+            return htmlEscapes[match];
+          });
+        }
+        function convertLocalPathsToHttpsLinks(htmlContent, hostName) {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(htmlContent, 'text/html');
+          const links = doc.querySelectorAll('a');
+          
+          links.forEach(link => {
+              const href = link.href;
+              if (!href.includes("http://") && !href.includes("https://") && !href.includes(hostName) && !href.includes("#")) {
+                  link.href = href.replace(href, `https://${hostName}/${href}`);
+              }
+          });
+          const scripts = doc.querySelectorAll('script');
+          scripts.forEach(script => {
+              const src = script.src;
+              if (!src.includes("http://") && !src.includes("https://") && !src.includes(hostName) && src != "") {
+                  script.src = src.replace(src, `https://${hostName}/${src}`);
+              }
+          });
+          const stylesheets = doc.querySelectorAll('link');
+          stylesheets.forEach(stylesheet => {
+              const href = stylesheet.href;
+              if (!href.includes("http://") && !href.includes("https://") && !href.includes(hostName)) {
+                  stylesheet.href = href.replace(href, `https://${hostName}/${href}`);
+              }
+          });
+          return doc.documentElement.outerHTML;
+      }
+      function highlightCode(){
+        var htmlInput = ace.edit("htmlInput");
+        htmlInput.session.setMode("ace/mode/html");
+      }
+    </script>
+</body>
+</html>
